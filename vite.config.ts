@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(),tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -12,26 +12,21 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/widget.tsx"),
-      name: "ReactWidget",
-      fileName: "react-widget-uv",
-      formats: ["iife"],
+      entry: path.resolve(__dirname, 'src/widget.tsx'), 
+      name: 'ReactWidget',
+      fileName: 'react-widget-uv',
+      formats: ['iife'], 
     },
     rollupOptions: {
+      // Remove external dependencies to bundle them
+      // external: ['react', 'react-dom'],
       output: {
-        // Ensure CSS is bundled
-        assetFileNames: "react-widget-uv.[ext]",
+        // Remove globals mapping since React and ReactDOM will be bundled
+        // globals: {
+        //   react: 'React',
+        //   'react-dom': 'ReactDOM',
+        // },
       },
-    },
-    // Minify for production
-    minify: "esbuild",
-    // Generate sourcemaps
-    sourcemap: true,
-  },
-  // Ensure CSS is properly injected into Shadow DOM
-  css: {
-    modules: {
-      generateScopedName: "[name]__[local]___[hash:base64:5]",
     },
   },
 });

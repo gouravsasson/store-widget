@@ -6,33 +6,25 @@ import "./index.css";
 
 class ReactWidget extends HTMLElement {
   private root: ReactDOM.Root | null = null;
-  private shadow: ShadowRoot;
 
   constructor() {
     super();
-    this.shadow = this.attachShadow({ mode: "open" });
+    this.attachShadow({ mode: "open" });
   }
 
   connectedCallback() {
-    // Create container for React app
     const container = document.createElement("div");
-    container.setAttribute("class", "widget-container");
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "https://store-widget.vercel.app/react-widget-uv.css";
 
-    // Create stylesheet link for Tailwind and custom styles
-    const styleLink = document.createElement("link");
-    styleLink.rel = "stylesheet";
-    styleLink.href = "/react-widget-uv.css";
+    // Append the stylesheet and container to the Shadow DOM
+    this.shadowRoot?.appendChild(link);
+    this.shadowRoot?.appendChild(container);
 
-    // Append to shadow DOM
-    this.shadow.appendChild(styleLink);
-    this.shadow.appendChild(container);
-
-    // Get attributes for WidgetProvider
     const agent_id = this.getAttribute("agent_id") || "";
     const schema = this.getAttribute("schema") || "";
     const type = this.getAttribute("type") || "";
-
-    // Create React root and render
     this.root = ReactDOM.createRoot(container);
     this.root.render(
       <React.StrictMode>
@@ -44,7 +36,6 @@ class ReactWidget extends HTMLElement {
   }
 
   disconnectedCallback() {
-    // Cleanup React root
     if (this.root) {
       this.root.unmount();
       this.root = null;
@@ -52,5 +43,4 @@ class ReactWidget extends HTMLElement {
   }
 }
 
-// Define custom element
 customElements.define("react-widget-uv", ReactWidget);
