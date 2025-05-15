@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  plugins: [react(),tailwindcss()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -12,20 +12,15 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: path.resolve(__dirname, 'src/widget.tsx'), 
-      name: 'ReactWidget',
-      fileName: 'react-widget-uv',
-      formats: ['iife'], 
+      entry: path.resolve(__dirname, "src/widget.tsx"),
+      name: "ReactWidget",
+      fileName: "react-widget-uv",
+      formats: ["iife"],
     },
     rollupOptions: {
-      // Remove external dependencies to bundle them
-      // external: ['react', 'react-dom'],
       output: {
-        // Remove globals mapping since React and ReactDOM will be bundled
-        // globals: {
-        //   react: 'React',
-        //   'react-dom': 'ReactDOM',
-        // },
+        // Ensure proper output for IIFE
+        entryFileNames: "react-widget-uv.iife.js",
       },
     },
   },
