@@ -69,7 +69,7 @@ const CustomWidget = () => {
     status,
     setStatus,
   } = useUltravoxStore();
-  const baseurl = "https://app.snowie.ai";
+  const baseurl = "https://shop.snowie.ai";
   const { agent_id, schema } = useWidgetContext();
   console.log("agent_id", agent_id);
   console.log("schema", schema);
@@ -235,11 +235,14 @@ const CustomWidget = () => {
 
   const handleMicClickForReconnect = async (id) => {
     try {
-      const response = await axios.post(`${baseurl}/api/start-thunder/`, {
-        agent_code: agent_id,
-        schema_name: schema,
-        prior_call_id: id,
-      });
+      const response = await axios.post(
+        `${baseurl}/api/shopify/start-thunder/`,
+        {
+          agent_code: agent_id,
+          schema_name: schema,
+          prior_call_id: id,
+        }
+      );
 
       const wssUrl = response.data.joinUrl;
       const callId = response.data.callId;
@@ -282,10 +285,13 @@ const CustomWidget = () => {
   const handleMicClick = async () => {
     try {
       if (status === "disconnected") {
-        const response = await axios.post(`${baseurl}/api/start-thunder/`, {
-          agent_code: agent_id,
-          schema_name: schema,
-        });
+        const response = await axios.post(
+          `${baseurl}/api/shopify/start-thunder/`,
+          {
+            agent_code: agent_id,
+            schema_name: schema,
+          }
+        );
 
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
@@ -436,7 +442,7 @@ const CustomWidget = () => {
       setExpanded(!expanded);
       await session.leaveCall();
       const response = await axios.post(
-        `${baseurl}/api/end-call-session-thunder/`,
+        `${baseurl}/api/shopify/end-call-session-thunder/`,
         {
           call_session_id: callSessionIds,
           schema_name: schema,
@@ -552,6 +558,215 @@ const CustomWidget = () => {
 
     return styles;
   };
+
+  const showProduct = async (
+    parameters: ProductParameters
+  ): Promise<string> => {
+    try {
+      const response = await axios.post(
+        `${baseurl}/api/shopify/show-product/`,
+        {
+          schema_name: schema,
+          call_session_id: callSessionIds,
+          query: parameters.query || "",
+          top_k: 1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: "csrftoken=xjHalmQklLKzhpPd4nXCHyRofqj8RUFC",
+          },
+        }
+      );
+
+      const product = response.data.response;
+      console.log("PRODUCT", product);
+      console.log("PRODUCT URL", product.url);
+      const product_url = product.url;
+      const product_name = product.name;
+      const product_description = product.description;
+      if (product_url) {
+        console.log("TRYING TO OPEN", product_url);
+        localStorage.setItem("product_name", product_name);
+        localStorage.setItem("product_description", product_description);
+
+        window.location.assign(product_url); // Open the product URL in a new tab
+      }
+      return `Description: ${product.description}, Price: $${product.price}`;
+    } catch (error) {
+      console.error("Error in seeProduct:", error);
+      return "Error occurred while retrieving the product.";
+    }
+  };
+
+  // Function that implements the logic for the 'show_product' tool
+  const showCollection = async (
+    parameters: CollectionParameters
+  ): Promise<string> => {
+    try {
+      console.log("SHOWING COLLECTION", parameters);
+      const response = await axios.post(
+        `${baseurl}/api/shopify/show-collection/`,
+        {
+          schema_name: schema,
+          call_session_id: callSessionIds,
+          collection_query: parameters.query || "",
+          top_k: 1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: "csrftoken=xjHalmQklLKzhpPd4nXCHyRofqj8RUFC",
+          },
+        }
+      );
+
+      const collection = response.data.response;
+      console.log("COLLECTION", collection);
+      console.log("COLLECTION URL", collection.collection_url);
+      const collection_url = collection.collection_url;
+      const collection_name = collection.matched_collection;
+      const collection_description = collection.description;
+      if (collection_url) {
+        console.log("TRYING TO OPEN", collection_url);
+        localStorage.setItem("collection_name", collection_name);
+        localStorage.setItem("collection_description", collection_description);
+        window.location.assign(collection_url); // Open the product URL in a new tab
+      }
+      return `Description: ${collection.description}`;
+    } catch (error) {
+      console.error("Error in seeProduct:", error);
+      return "Error occurred while retrieving the product.";
+    }
+  };
+
+  // Function that implements the logic for the 'search_product' tool
+  const searchProduct = async (
+    parameters: ProductParameters
+  ): Promise<string> => {
+    try {
+      const response = await axios.post(
+        `${baseurl}/api/shopify/search-product/`,
+        {
+          query: parameters.query,
+          store_id: 1,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: "csrftoken=xjHalmQklLKzhpPd4nXCHyRofqj8RUFC",
+          },
+        }
+      );
+
+      const searchUrl = response.data.search_url;
+      if (searchUrl) {
+        window.location.assign(searchUrl); // Open the search URL in a new tab
+        return `Successfully opened the search URL`;
+      }
+    } catch (error) {
+      console.error("Error in searchProduct:", error);
+      return "Error occurred while searching for the product.";
+    }
+    return "No search URL found.";
+  };
+
+  function scrollUp(): string {
+    window.scrollBy({
+      top: -300, // Scrolls up by 300 pixels
+      behavior: "smooth",
+    });
+    return "Scrolled up "; // Return a string or appropriate type
+  }
+
+  function scrollDown(): string {
+    window.scrollBy({
+      top: 300, // Scrolls down by 300 pixels
+      behavior: "smooth",
+    });
+    return "Scrolled down"; // Return a string or appropriate type
+  }
+
+  function buyNow(): string {
+    // Find the button element by its class name
+    const button = document.querySelector(
+      ".shopify-payment-button__button--unbranded"
+    );
+
+    const product_url = window.location.href;
+    // Make an API call to mark the product as converted
+    axios
+      .post(`${baseurl}/api/shopify/mark-product-converted/`, {
+        product_url: product_url,
+        schema_name: schema,
+        call_session_id: callSessionIds,
+      })
+      .then((response) => {
+        console.log("Product marked as converted:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error marking product as converted:", error);
+      });
+
+    // If the button exists, simulate a click
+    if (button) {
+      button.click();
+      return "Button clicked"; // Return a message when the button is clicked
+    } else {
+      return "Button not found"; // Return an error message if the button is not found
+    }
+  }
+
+  function addToCart(): string {
+    const product_url = window.location.href;
+
+    // Find the button element by its ID
+    const button = document.getElementById(
+      "ProductSubmitButton-template--24466834784574__main"
+    );
+
+    // Make an API call to mark the product as converted
+    axios
+      .post(`${baseurl}/api/shopify/mark-product-converted/`, {
+        product_url: product_url,
+        schema_name: schema,
+        call_session_id: callSessionIds,
+      })
+      .then((response) => {
+        console.log("Product marked as converted:", response.data);
+      })
+      .catch((error) => {
+        console.error("Error marking product as converted:", error);
+      });
+
+    // If the button exists, simulate a click
+    if (button) {
+      button.click();
+      return "Add to Cart button clicked"; // Return a message when the button is clicked
+    } else {
+      return "Add to Cart button not found"; // Return an error message if the button is not found
+    }
+  }
+
+  function openCart(): string {
+    window.location.assign(window.location.origin + "/cart");
+    return "Cart opened";
+  }
+  // Register the client-side tools
+  sessionRef.current.registerToolImplementation(
+    "search_product",
+    searchProduct
+  );
+  sessionRef.current.registerToolImplementation("show_product", showProduct);
+  sessionRef.current.registerToolImplementation(
+    "show_collection",
+    showCollection
+  );
+  sessionRef.current.registerToolImplementation("scroll_up", scrollUp);
+  sessionRef.current.registerToolImplementation("scroll_down", scrollDown);
+  sessionRef.current.registerToolImplementation("buy_now", buyNow);
+  sessionRef.current.registerToolImplementation("add_to_cart", addToCart);
+  sessionRef.current.registerToolImplementation("open_cart", openCart);
 
   if (!onlyOnce.current || !widgetTheme) {
     return null; // Or return <div>Loading...</div>
