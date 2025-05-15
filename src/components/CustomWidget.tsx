@@ -202,7 +202,7 @@ const CustomWidget = () => {
           await session.leaveCall();
 
           const response = await axios.post(
-            `${baseurl}/api/end-call-session-thunder/`,
+            `${baseurl}/api/shopify/end-call-session-thunder/`,
             {
               call_session_id: callSessionIds,
               schema_name: schema,
@@ -334,7 +334,7 @@ const CustomWidget = () => {
         await session.leaveCall();
         console.log("call left successfully second time");
         const response = await axios.post(
-          `${baseurl}/api/end-call-session-thunder/`,
+          `${baseurl}/api/shopify/end-call-session-thunder/`,
           {
             call_session_id: callSessionIds,
             schema_name: schema,
