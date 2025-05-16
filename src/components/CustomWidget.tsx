@@ -115,7 +115,7 @@ const CustomWidget = () => {
     const getWidgetTheme = async () => {
       try {
         const response = await axios.get(
-          `${baseurl}/api/shopify/thunder-widget-settings/${schema}/${agent_id}/`
+          `${baseurl}/api/thunder-widget-settings/${schema}/${agent_id}/`
         );
         const data = response.data.response;
         console.log(data);
