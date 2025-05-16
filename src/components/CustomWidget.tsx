@@ -92,8 +92,6 @@ const CustomWidget = () => {
   } = useUltravoxStore();
   const baseurl = "https://shop.snowie.ai";
   const { agent_id, schema } = useWidgetContext();
-  console.log("agent_id", agent_id);
-  console.log("schema", schema);
 
   // const agent_id = "68ec3404-7c46-4028-b7f3-42bae5c4976f";
   // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
@@ -104,6 +102,12 @@ const CustomWidget = () => {
 
   const debugMessages = new Set(["debug"]);
   const onlyOnce = useRef(false);
+  const [showform, setShowform] = useState(false);
+  useEffect(() => {
+    if (widgetTheme?.bot_show_form) {
+      setShowform(true);
+    }
+  }, [widgetTheme?.bot_show_form]);
 
   useEffect(() => {
     if (onlyOnce.current) return;
@@ -234,6 +238,7 @@ const CustomWidget = () => {
           localStorage.clear();
           setTranscripts(null);
           toggleVoice(false);
+          widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
         };
 
         handleClose();
@@ -258,11 +263,14 @@ const CustomWidget = () => {
     setExpanded(true);
 
     try {
-      const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
-        agent_code: agent_id,
-        schema_name: schema,
-        prior_call_id: id,
-      });
+      const response = await axios.post(
+        `${baseurl}/api/shopify/start-thunder/`,
+        {
+          agent_code: agent_id,
+          schema_name: schema,
+          prior_call_id: id,
+        }
+      );
 
       const wssUrl = response.data.joinUrl;
       const callId = response.data.callId;
@@ -292,6 +300,7 @@ const CustomWidget = () => {
         "callSessionId",
         JSON.stringify(existingCallSessionIds)
       );
+      setShowform(false);
 
       if (wssUrl) {
         await session.joinCall(`${wssUrl}`);
@@ -305,16 +314,20 @@ const CustomWidget = () => {
   const handleMicClick = async () => {
     try {
       if (status === "disconnected") {
-        const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
-          agent_code: agent_id,
-          schema_name: schema,
-        });
+        const response = await axios.post(
+          `${baseurl}/api/shopify/start-thunder/`,
+          {
+            agent_code: agent_id,
+            schema_name: schema,
+          }
+        );
 
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
         localStorage.setItem("callId", callId);
         localStorage.setItem("wssUrl", wssUrl);
         setCallSessionIds(response.data.call_session_id);
+        setShowform(false);
         if (storedIds) {
           try {
             const parsedIds = JSON.parse(storedIds);
@@ -363,6 +376,7 @@ const CustomWidget = () => {
         setTranscripts(null);
         toggleVoice(false);
         localStorage.clear();
+        widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
       }
     } catch (error) {
       // console.error("Error in handleMicClick:", error);
@@ -475,6 +489,7 @@ const CustomWidget = () => {
 
       setTranscripts(null);
       toggleVoice(false);
+      widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
     } else {
       setExpanded(!expanded);
     }
@@ -515,19 +530,6 @@ const CustomWidget = () => {
       contentFactor = 0.8;
     }
 
-    // Apply size only when expanded
-    // if (expanded) {
-    //   const widthPercent = Math.min(widgetTheme?.bot_width, 100) / 100;
-    //   const heightPercent = Math.min(widgetTheme?.bot_height, 100) / 100;
-
-    //   const viewportWidth = window.innerWidth;
-    //   const viewportHeight = window.innerHeight;
-    //   let calculatedWidth = widthPercent * viewportWidth * contentFactor;
-    //   let calculatedHeight = heightPercent * viewportHeight * contentFactor;
-
-    //   calculatedWidth = Math.max(
-    //     minWidthPx,
-    //     Math.min(calculatedWidth, maxWidthPx)
     //   );
     //   calculatedHeight = Math.max(
     //     minHeightPx,
@@ -584,19 +586,23 @@ const CustomWidget = () => {
     e.preventDefault();
     try {
       if (status === "disconnected") {
-        const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
-          agent_code: agent_id,
-          schema_name: schema,
-          phone: countryCode + formData.phone,
-          name: formData.name,
-          email: formData.email,
-        });
+        const response = await axios.post(
+          `${baseurl}/api/shopify/start-thunder/`,
+          {
+            agent_code: agent_id,
+            schema_name: schema,
+            phone: countryCode + formData.phone,
+            name: formData.name,
+            email: formData.email,
+          }
+        );
 
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
         localStorage.setItem("callId", callId);
         localStorage.setItem("wssUrl", wssUrl);
         setCallSessionIds(response.data.call_session_id);
+        setShowform(false);
         if (storedIds) {
           try {
             const parsedIds = JSON.parse(storedIds);
@@ -645,6 +651,7 @@ const CustomWidget = () => {
         setTranscripts(null);
         toggleVoice(false);
         localStorage.clear();
+        widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
       }
     } catch (error) {
       // console.error("Error in handleMicClick:", error);
@@ -1031,7 +1038,7 @@ const CustomWidget = () => {
               {speech}
             </p>
 
-            {widgetTheme?.bot_show_form ? (
+            {showform ? (
               <form onSubmit={startfromform}>
                 <div className="flex flex-col gap-4 m-4">
                   {[
