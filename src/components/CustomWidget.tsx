@@ -675,7 +675,7 @@ const CustomWidget = () => {
   ): Promise<string> => {
     try {
       const response = await axios.post(
-        `${baseurl}/api/shopify/shopify/show-product/`,
+        `${baseurl}/api/shopify/show-product/`,
         {
           schema_name: schema,
           call_session_id: callSessionIds,
@@ -717,7 +717,7 @@ const CustomWidget = () => {
     try {
       console.log("SHOWING COLLECTION", parameters);
       const response = await axios.post(
-        `${baseurl}/api/shopify/shopify/show-collection/`,
+        `${baseurl}/api/shopify/show-collection/`,
         {
           schema_name: schema,
           call_session_id: callSessionIds,
