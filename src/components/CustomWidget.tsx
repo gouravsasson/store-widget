@@ -474,7 +474,7 @@ const CustomWidget = () => {
     if (status !== "disconnected") {
       hasClosed.current = true;
       const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
-      setExpanded(!expanded);
+      setExpanded(false);
       await session.leaveCall();
       const response = await axios.post(
         `${baseurl}/api/shopify/end-call-session-thunder/`,
