@@ -134,6 +134,7 @@ const CustomWidget = () => {
       setSpeech(`Connecting To ${widgetTheme?.bot_name}`);
     } else if (status === "speaking") {
       setSpeech(`${widgetTheme?.bot_name} is Speaking`);
+      setExpanded(true);
     } else if (status === "connected") {
       setSpeech(`Connected To ${widgetTheme?.bot_name}`);
     } else if (status === "disconnecting") {
@@ -296,8 +297,7 @@ const CustomWidget = () => {
       setShowform(false);
 
       if (wssUrl) {
-        await session.joinCall(`${wssUrl}`);
-        setExpanded(true);
+        session.joinCall(`${wssUrl}`);
       }
     } catch (error) {
       console.error("Error in handleMicClick:", error);
