@@ -97,7 +97,6 @@ const CustomWidget = () => {
   // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
   let existingCallSessionIds: string[] = [];
   const AutoStartref = useRef(false);
-  console.log("AutoStartref", AutoStartref.current);
   const storedIds = localStorage.getItem("callSessionId");
 
   const debugMessages = new Set(["debug"]);
@@ -118,7 +117,6 @@ const CustomWidget = () => {
           `${baseurl}/api/thunder-widget-settings/${schema}/${agent_id}/`
         );
         const data = response.data.response;
-        console.log(data);
         setWidgetTheme(data);
         onlyOnce.current = true;
       } catch (error) {
@@ -210,11 +208,7 @@ const CustomWidget = () => {
 
   // disconnecting
   useEffect(() => {
-    console.log("status", status);
-
     if (status === "disconnecting" && !hasClosed.current) {
-      console.log("auto disconnect");
-
       // Only run cleanup if this isn't a page refresh
       const isPageRefresh = sessionStorage.getItem("isRefreshing") === "true";
 
@@ -249,7 +243,6 @@ const CustomWidget = () => {
   // autostart on page refresh
   useEffect(() => {
     const callId = localStorage.getItem("callId");
-    console.log(callId, status, hasReconnected.current);
     if (callId && status === "disconnected" && !hasReconnected.current) {
       setIsMuted(true);
       handleMicClickForReconnect(callId);
@@ -260,6 +253,7 @@ const CustomWidget = () => {
   }, [status]);
 
   const handleMicClickForReconnect = async (id) => {
+    console.log("handleMicClickForReconnect");
     setExpanded(true);
 
     try {
@@ -312,6 +306,7 @@ const CustomWidget = () => {
 
   // Handle mic button click
   const handleMicClick = async () => {
+    console.log("running handleMicClick");
     try {
       if (status === "disconnected") {
         const response = await axios.post(
@@ -354,7 +349,6 @@ const CustomWidget = () => {
         if (wssUrl) {
           session.joinCall(`${wssUrl}`);
           if (AutoStartref.current) {
-            console.log("unmuting speaker", session.isSpeakerMuted);
             session.unmuteSpeaker();
           }
         }
@@ -362,7 +356,6 @@ const CustomWidget = () => {
       } else {
         const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
         await session.leaveCall();
-        console.log("call left successfully second time");
         const response = await axios.post(
           `${baseurl}/api/shopify/end-call-session-thunder/`,
           {
@@ -371,8 +364,6 @@ const CustomWidget = () => {
             prior_call_ids: callSessionId,
           }
         );
-
-        // console.log("Call left successfully");
         setTranscripts(null);
         toggleVoice(false);
         localStorage.clear();
@@ -392,8 +383,6 @@ const CustomWidget = () => {
   }, [widgetTheme?.bot_auto_start]);
 
   session.addEventListener("transcripts", (event) => {
-    // console.log("Transcripts updated: ", session);
-
     const alltrans = session.transcripts;
 
     let Trans = "";
@@ -412,12 +401,9 @@ const CustomWidget = () => {
   // Listen for status changing events
   session.addEventListener("status", (event) => {
     setStatus(session.status);
-    // console.log("Session status changed: ", session.status);
   });
 
-  session.addEventListener("experimental_message", (msg) => {
-    console.log("Got a debug message: ", JSON.stringify(msg));
-  });
+  session.addEventListener("experimental_message", (msg) => {});
 
   // Animated pulse effects for recording state
   useEffect(() => {
@@ -471,11 +457,16 @@ const CustomWidget = () => {
   };
 
   const handleClose = async () => {
+    console.log("status", status);
     if (status !== "disconnected") {
+      localStorage.clear();
+
       hasClosed.current = true;
       const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
       setExpanded(false);
       await session.leaveCall();
+      widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
+
       const response = await axios.post(
         `${baseurl}/api/shopify/end-call-session-thunder/`,
         {
@@ -485,11 +476,9 @@ const CustomWidget = () => {
         }
       );
       hasClosed.current = false;
-      localStorage.clear();
 
       setTranscripts(null);
       toggleVoice(false);
-      widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
     } else {
       setExpanded(!expanded);
     }
@@ -577,7 +566,7 @@ const CustomWidget = () => {
         styles.right = "20px";
     }
 
-    console.log(styles);
+    styles;
 
     return styles;
   };
@@ -629,7 +618,6 @@ const CustomWidget = () => {
         if (wssUrl) {
           session.joinCall(`${wssUrl}`);
           if (AutoStartref.current) {
-            console.log("unmuting speaker", session.isSpeakerMuted);
             session.unmuteSpeaker();
           }
         }
@@ -637,7 +625,6 @@ const CustomWidget = () => {
       } else {
         const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
         await session.leaveCall();
-        console.log("call left successfully second time");
         const response = await axios.post(
           `${baseurl}/api/shopify/end-call-session-thunder/`,
           {
@@ -646,8 +633,6 @@ const CustomWidget = () => {
             prior_call_ids: callSessionId,
           }
         );
-
-        // console.log("Call left successfully");
         setTranscripts(null);
         toggleVoice(false);
         localStorage.clear();
@@ -691,13 +676,10 @@ const CustomWidget = () => {
       );
 
       const product = response.data.response;
-      console.log("PRODUCT", product);
-      console.log("PRODUCT URL", product.url);
       const product_url = product.url;
       const product_name = product.name;
       const product_description = product.description;
       if (product_url) {
-        console.log("TRYING TO OPEN", product_url);
         localStorage.setItem("product_name", product_name);
         localStorage.setItem("product_description", product_description);
 
@@ -715,7 +697,6 @@ const CustomWidget = () => {
     parameters: CollectionParameters
   ): Promise<string> => {
     try {
-      console.log("SHOWING COLLECTION", parameters);
       const response = await axios.post(
         `${baseurl}/api/shopify/show-collection/`,
         {
@@ -733,13 +714,10 @@ const CustomWidget = () => {
       );
 
       const collection = response.data.response;
-      console.log("COLLECTION", collection);
-      console.log("COLLECTION URL", collection.collection_url);
       const collection_url = collection.collection_url;
       const collection_name = collection.matched_collection;
       const collection_description = collection.description;
       if (collection_url) {
-        console.log("TRYING TO OPEN", collection_url);
         localStorage.setItem("collection_name", collection_name);
         localStorage.setItem("collection_description", collection_description);
         window.location.assign(collection_url); // Open the product URL in a new tab
