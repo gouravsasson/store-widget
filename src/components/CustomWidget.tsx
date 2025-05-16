@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Mic, Send, X, Minimize2, Pause } from "lucide-react";
+import {
+  Mic,
+  Send,
+  X,
+  Minimize2,
+  Pause,
+  Loader2,
+  User,
+  Mail,
+} from "lucide-react";
 import { MicOff } from "lucide-react";
 import axios from "axios";
 import { UltravoxSession } from "ultravox-client";
@@ -7,6 +16,8 @@ import { useWidgetContext } from "../constexts/WidgetContext";
 import useSessionStore from "../store/session";
 import { useUltravoxStore } from "../store/ultrasession";
 import logo from "../assets/logo.png";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 
 export interface WidgetTheme {
   widget_theme: {
@@ -32,11 +43,15 @@ export interface WidgetTheme {
     bot_status_bar_text_color: string;
     bot_animation_color: string;
     bot_name: string;
+    bot_show_form: boolean;
   };
 }
 
 const CustomWidget = () => {
   const [widgetTheme, setWidgetTheme] = useState<WidgetTheme | null>(null);
+  const countryCode = localStorage.getItem("countryCode");
+
+  const continentcode = localStorage.getItem("continentcode");
 
   const [expanded, setExpanded] = useState(false);
   const [inputValue, setInputValue] = useState("");
@@ -59,6 +74,12 @@ const CustomWidget = () => {
   const hasClosed = useRef(false);
 
   const { callSessionIds, setCallSessionIds } = useSessionStore();
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+  });
+  const [phoneError, setPhoneError] = useState("");
 
   const {
     setSession,
@@ -69,7 +90,7 @@ const CustomWidget = () => {
     status,
     setStatus,
   } = useUltravoxStore();
-  const baseurl = "https://shop.snowie.ai";
+  const baseurl = "https://app.snowie.ai";
   const { agent_id, schema } = useWidgetContext();
   console.log("agent_id", agent_id);
   console.log("schema", schema);
@@ -202,7 +223,7 @@ const CustomWidget = () => {
           await session.leaveCall();
 
           const response = await axios.post(
-            `${baseurl}/api/shopify/end-call-session-thunder/`,
+            `${baseurl}/api/end-call-session-thunder/`,
             {
               call_session_id: callSessionIds,
               schema_name: schema,
@@ -234,15 +255,14 @@ const CustomWidget = () => {
   }, [status]);
 
   const handleMicClickForReconnect = async (id) => {
+    setExpanded(true);
+
     try {
-      const response = await axios.post(
-        `${baseurl}/api/shopify/start-thunder/`,
-        {
-          agent_code: agent_id,
-          schema_name: schema,
-          prior_call_id: id,
-        }
-      );
+      const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+        agent_code: agent_id,
+        schema_name: schema,
+        prior_call_id: id,
+      });
 
       const wssUrl = response.data.joinUrl;
       const callId = response.data.callId;
@@ -285,13 +305,10 @@ const CustomWidget = () => {
   const handleMicClick = async () => {
     try {
       if (status === "disconnected") {
-        const response = await axios.post(
-          `${baseurl}/api/shopify/start-thunder/`,
-          {
-            agent_code: agent_id,
-            schema_name: schema,
-          }
-        );
+        const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+          agent_code: agent_id,
+          schema_name: schema,
+        });
 
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
@@ -334,7 +351,7 @@ const CustomWidget = () => {
         await session.leaveCall();
         console.log("call left successfully second time");
         const response = await axios.post(
-          `${baseurl}/api/shopify/end-call-session-thunder/`,
+          `${baseurl}/api/end-call-session-thunder/`,
           {
             call_session_id: callSessionIds,
             schema_name: schema,
@@ -412,6 +429,10 @@ const CustomWidget = () => {
   }, [isRecording]);
 
   const toggleExpand = () => {
+    if (widgetTheme?.bot_show_form) {
+      setExpanded(!expanded);
+      return;
+    }
     if (status === "disconnected") {
       setSpeech(`Connecting To ${widgetTheme?.bot_name}`);
 
@@ -442,7 +463,7 @@ const CustomWidget = () => {
       setExpanded(!expanded);
       await session.leaveCall();
       const response = await axios.post(
-        `${baseurl}/api/shopify/end-call-session-thunder/`,
+        `${baseurl}/api/end-call-session-thunder/`,
         {
           call_session_id: callSessionIds,
           schema_name: schema,
@@ -559,6 +580,89 @@ const CustomWidget = () => {
     return styles;
   };
 
+  const startfromform = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      if (status === "disconnected") {
+        const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+          agent_code: agent_id,
+          schema_name: schema,
+          phone: countryCode + formData.phone,
+          name: formData.name,
+          email: formData.email,
+        });
+
+        const wssUrl = response.data.joinUrl;
+        const callId = response.data.callId;
+        localStorage.setItem("callId", callId);
+        localStorage.setItem("wssUrl", wssUrl);
+        setCallSessionIds(response.data.call_session_id);
+        if (storedIds) {
+          try {
+            const parsedIds = JSON.parse(storedIds);
+            // Ensure it's actually an array
+            if (Array.isArray(parsedIds)) {
+              existingCallSessionIds = parsedIds;
+            }
+          } catch (parseError) {
+            console.warn("Could not parse callSessionId:", parseError);
+            // Optional: clear invalid data
+            localStorage.removeItem("callSessionId");
+          }
+        }
+
+        // Append the new ID
+        existingCallSessionIds.push(callId);
+
+        // Store back in localStorage
+        localStorage.setItem(
+          "callSessionId",
+          JSON.stringify(existingCallSessionIds)
+        );
+
+        if (wssUrl) {
+          session.joinCall(`${wssUrl}`);
+          if (AutoStartref.current) {
+            console.log("unmuting speaker", session.isSpeakerMuted);
+            session.unmuteSpeaker();
+          }
+        }
+        toggleVoice(true);
+      } else {
+        const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
+        await session.leaveCall();
+        console.log("call left successfully second time");
+        const response = await axios.post(
+          `${baseurl}/api/end-call-session-thunder/`,
+          {
+            call_session_id: callSessionIds,
+            schema_name: schema,
+            prior_call_ids: callSessionId,
+          }
+        );
+
+        // console.log("Call left successfully");
+        setTranscripts(null);
+        toggleVoice(false);
+        localStorage.clear();
+      }
+    } catch (error) {
+      // console.error("Error in handleMicClick:", error);
+    }
+  };
+
+  // Define the type for parameters with optional properties
+  interface ProductParameters {
+    productId?: string;
+    query?: string;
+  }
+
+  interface CollectionParameters {
+    collectionId?: string;
+    query?: string;
+  }
+
+  // Function that implements the logic for the 'show_product' tool
   const showProduct = async (
     parameters: ProductParameters
   ): Promise<string> => {
@@ -776,7 +880,9 @@ const CustomWidget = () => {
     <div style={getWidgetStyles()} className="flex flex-col items-end">
       {expanded ? (
         <div
-          className={`bg-gray-900/50 backdrop-blur-sm w-[309px] h-[521px] rounded-2xl shadow-2xl overflow-hidden border `}
+          className={`bg-gray-900/50 backdrop-blur-sm w-[309px]  rounded-2xl shadow-2xl overflow-hidden border ${
+            widgetTheme?.bot_show_form ? "h-[550px]" : "h-[521px]"
+          }`}
           style={{
             backgroundColor: widgetTheme?.bot_background_color,
             borderColor: widgetTheme?.bot_border_color,
@@ -925,74 +1031,168 @@ const CustomWidget = () => {
               {speech}
             </p>
 
-            {/* Transcription Box with enhanced styling */}
-            {widgetTheme?.bot_show_transcript && (
-              <div className="relative p-4 w-full ">
-                <div className="absolute inset-0 "></div>
-                <div className="relative">
-                  <div className="flex justify-between items-center mb-2">
-                    {/* <div className="text-yellow-400 text-sm font-medium">
+            {widgetTheme?.bot_show_form ? (
+              <form onSubmit={startfromform}>
+                <div className="flex flex-col gap-4 m-4">
+                  {[
+                    {
+                      icon: <User className="h-5 w-5 text-gray-400" />,
+                      value: formData.name,
+                      type: "text",
+                      placeholder: "Your name",
+                      key: "name",
+                      component: "",
+                    },
+                    {
+                      icon: <Mail className="h-5 w-5 text-gray-400" />,
+                      value: formData.email,
+                      type: "email",
+                      placeholder: "Email address",
+                      key: "email",
+                      component: "",
+                    },
+                  ].map((field, index) => (
+                    <div className="relative" key={index}>
+                      <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
+                        {field.icon}
+                      </div>
+                      <div className="flex items-center">
+                        {field.component}
+                        <input
+                          type={field.type}
+                          required
+                          value={field.value}
+                          maxLength={field.maxLength}
+                          onChange={(e) => {
+                            let value = e.target.value;
+                            if (field.key === "phone") {
+                              value = value.replace(/\D/g, ""); // remove non-digit characters
+                            }
+                            setFormData({ ...formData, [field.key]: value });
+                          }}
+                          className={`block w-full pl-12 pr-4 py-2 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 transition ${
+                            field.component && " rounded-l-none !pl-2 h-[40px]"
+                          }`}
+                          placeholder={field.placeholder}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <PhoneInput
+                    dropdownClass="bottom-10 z-50"
+                    dropdownStyle={{ zIndex: 1000 }}
+                    inputProps={{
+                      name: "phone",
+                      required: true,
+                    }}
+                    country={`${continentcode?.toLowerCase()}`}
+                    value={formData.phone}
+                    onChange={(phone) => {
+                      setFormData({ ...formData, phone });
+                      setPhoneError(""); // clear error as user types
+                    }}
+                    enableSearch={true}
+                  />
+
+                  {phoneError && (
+                    <div className="text-red-500 text-sm mt-1">
+                      {phoneError}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-yellow-400 text-black font-semibold py-3 px-4 rounded-xl hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 transition-colors"
+                  >
+                    {status === "connecting" ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin" /> Connecting
+                        to AI Assistant
+                      </div>
+                    ) : (
+                      "Connect to AI Assistant"
+                    )}
+                  </button>
+
+                  {/* {error && (
+                    <div className="text-red-500 text-center text-sm mt-2">
+                      {error}
+                    </div>
+                  )} */}
+                </div>
+              </form>
+            ) : (
+              <>
+                {/* Transcription Box with enhanced styling */}
+                {widgetTheme?.bot_show_transcript && (
+                  <div className="relative p-4 w-full ">
+                    <div className="absolute inset-0 "></div>
+                    <div className="relative">
+                      <div className="flex justify-between items-center mb-2">
+                        {/* <div className="text-yellow-400 text-sm font-medium">
                   Real-time transcription
                 </div> */}
-                    {isRecording && (
-                      <div className="flex items-center">
-                        <div className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse"></div>
-                        <span className="text-red-400 text-xs">LIVE</span>
+                        {isRecording && (
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse"></div>
+                            <span className="text-red-400 text-xs">LIVE</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div
-                    ref={containerRef}
-                    className=" bg-white backdrop-blur-sm rounded-xl p-4 h-16 text-white shadow-inner border border-gray-800 overflow-y-auto scrollbar-hide ring-yellow-400/80"
-                  >
-                    <div className="relative">
-                      <span className="text-black">{transcripts}</span>
+                      <div
+                        ref={containerRef}
+                        className=" bg-white backdrop-blur-sm rounded-xl p-4 h-16 text-white shadow-inner border border-gray-800 overflow-y-auto scrollbar-hide ring-yellow-400/80"
+                      >
+                        <div className="relative">
+                          <span className="text-black">{transcripts}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
 
-            {/* Input Area with glass effect */}
-            {widgetTheme?.bot_show_chat && (
-              <div className="relative p-3 ">
-                <div className="absolute inset-0"></div>
-                <div className="relative flex items-center space-x-2">
-                  <input
-                    type="text"
-                    disabled={
-                      status === "disconnected" || status === "connecting"
-                    }
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        handleSubmit(e.target.value);
-                      }
-                    }}
-                    placeholder="Type your message..."
-                    className="flex-1 bg-white text-black p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/80 placeholder-gray-500 border border-gray-700"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="p-3  rounded-xl  transition-colors shadow-md"
-                    style={{
-                      backgroundColor: widgetTheme?.bot_button_color,
-                      borderColor: widgetTheme?.bot_border_color,
-                      color: widgetTheme?.bot_button_text_color,
-                    }}
-                  >
-                    <Send
-                      size={20}
-                      className="text-black"
-                      style={{
-                        color: widgetTheme?.bot_button_text_color,
-                      }}
-                    />
-                  </button>
-                </div>
-              </div>
+                {/* Input Area with glass effect */}
+                {widgetTheme?.bot_show_chat && (
+                  <div className="relative p-3 ">
+                    <div className="absolute inset-0"></div>
+                    <div className="relative flex items-center space-x-2">
+                      <input
+                        type="text"
+                        disabled={
+                          status === "disconnected" || status === "connecting"
+                        }
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleSubmit(e.target.value);
+                          }
+                        }}
+                        placeholder="Type your message..."
+                        className="flex-1 bg-white text-black p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/80 placeholder-gray-500 border border-gray-700"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSubmit}
+                        className="p-3  rounded-xl  transition-colors shadow-md"
+                        style={{
+                          backgroundColor: widgetTheme?.bot_button_color,
+                          borderColor: widgetTheme?.bot_border_color,
+                          color: widgetTheme?.bot_button_text_color,
+                        }}
+                      >
+                        <Send
+                          size={20}
+                          className="text-black"
+                          style={{
+                            color: widgetTheme?.bot_button_text_color,
+                          }}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

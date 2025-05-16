@@ -1,7 +1,7 @@
 import CustomWidget from "./components/CustomWidget";
 
 function App() {
-  return <CustomWidget />;
+  return <CustomWidget/>;
 }
 
 export default App;
