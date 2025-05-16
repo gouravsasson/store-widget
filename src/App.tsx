@@ -15,7 +15,7 @@ function App() {
       };
       fetchIp();
     }
-  }, []);g
+  }, []);
   return <CustomWidget />;
 }
 
