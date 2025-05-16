@@ -254,7 +254,6 @@ const CustomWidget = () => {
 
   const handleMicClickForReconnect = async (id) => {
     console.log("handleMicClickForReconnect");
-    setExpanded(true);
 
     try {
       const response = await axios.post(
@@ -298,6 +297,7 @@ const CustomWidget = () => {
 
       if (wssUrl) {
         await session.joinCall(`${wssUrl}`);
+        setExpanded(true);
       }
     } catch (error) {
       console.error("Error in handleMicClick:", error);
