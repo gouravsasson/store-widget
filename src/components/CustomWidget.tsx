@@ -90,7 +90,7 @@ const CustomWidget = () => {
     status,
     setStatus,
   } = useUltravoxStore();
-  const baseurl = "https://app.snowie.ai";
+  const baseurl = "https://shop.snowie.ai";
   const { agent_id, schema } = useWidgetContext();
   console.log("agent_id", agent_id);
   console.log("schema", schema);
@@ -111,7 +111,7 @@ const CustomWidget = () => {
     const getWidgetTheme = async () => {
       try {
         const response = await axios.get(
-          `${baseurl}/api/thunder-widget-settings/${schema}/${agent_id}/`
+          `${baseurl}/api/shopify/thunder-widget-settings/${schema}/${agent_id}/`
         );
         const data = response.data.response;
         console.log(data);
@@ -223,7 +223,7 @@ const CustomWidget = () => {
           await session.leaveCall();
 
           const response = await axios.post(
-            `${baseurl}/api/end-call-session-thunder/`,
+            `${baseurl}/api/shopify/end-call-session-thunder/`,
             {
               call_session_id: callSessionIds,
               schema_name: schema,
@@ -258,7 +258,7 @@ const CustomWidget = () => {
     setExpanded(true);
 
     try {
-      const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+      const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
         agent_code: agent_id,
         schema_name: schema,
         prior_call_id: id,
@@ -305,7 +305,7 @@ const CustomWidget = () => {
   const handleMicClick = async () => {
     try {
       if (status === "disconnected") {
-        const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+        const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
           agent_code: agent_id,
           schema_name: schema,
         });
@@ -351,7 +351,7 @@ const CustomWidget = () => {
         await session.leaveCall();
         console.log("call left successfully second time");
         const response = await axios.post(
-          `${baseurl}/api/end-call-session-thunder/`,
+          `${baseurl}/api/shopify/end-call-session-thunder/`,
           {
             call_session_id: callSessionIds,
             schema_name: schema,
@@ -463,7 +463,7 @@ const CustomWidget = () => {
       setExpanded(!expanded);
       await session.leaveCall();
       const response = await axios.post(
-        `${baseurl}/api/end-call-session-thunder/`,
+        `${baseurl}/api/shopify/end-call-session-thunder/`,
         {
           call_session_id: callSessionIds,
           schema_name: schema,
@@ -584,7 +584,7 @@ const CustomWidget = () => {
     e.preventDefault();
     try {
       if (status === "disconnected") {
-        const response = await axios.post(`${baseurl}/api/start-thunder/`, {
+        const response = await axios.post(`${baseurl}/api/shopify/start-thunder/`, {
           agent_code: agent_id,
           schema_name: schema,
           phone: countryCode + formData.phone,
@@ -633,7 +633,7 @@ const CustomWidget = () => {
         await session.leaveCall();
         console.log("call left successfully second time");
         const response = await axios.post(
-          `${baseurl}/api/end-call-session-thunder/`,
+          `${baseurl}/api/shopify/end-call-session-thunder/`,
           {
             call_session_id: callSessionIds,
             schema_name: schema,
@@ -668,7 +668,7 @@ const CustomWidget = () => {
   ): Promise<string> => {
     try {
       const response = await axios.post(
-        `${baseurl}/api/shopify/show-product/`,
+        `${baseurl}/api/shopify/shopify/show-product/`,
         {
           schema_name: schema,
           call_session_id: callSessionIds,
@@ -710,7 +710,7 @@ const CustomWidget = () => {
     try {
       console.log("SHOWING COLLECTION", parameters);
       const response = await axios.post(
-        `${baseurl}/api/shopify/show-collection/`,
+        `${baseurl}/api/shopify/shopify/show-collection/`,
         {
           schema_name: schema,
           call_session_id: callSessionIds,
