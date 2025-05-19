@@ -459,10 +459,9 @@ const CustomWidget = () => {
   const handleClose = async () => {
     console.log("status", status);
     if (status !== "disconnected") {
-      localStorage.clear();
-
       hasClosed.current = true;
       const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
+      console.log("callSessionId", callSessionId);
       setExpanded(false);
       await session.leaveCall();
       widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
@@ -479,6 +478,7 @@ const CustomWidget = () => {
 
       setTranscripts(null);
       toggleVoice(false);
+      localStorage.clear();
     } else {
       setExpanded(!expanded);
     }
@@ -940,38 +940,8 @@ const CustomWidget = () => {
 
           {/* Microphone Button with enhanced visual effects */}
           <div className="pt-10 flex flex-col items-center justify-center relative overflow-hidden w-full ">
-            {/* Background glow effects */}
-            {/* <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/10 to-transparent"></div> */}
-            {/* <div className="absolute w-full h-64 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-400/10 rounded-full blur-3xl"></div> */}
-            {/* <div className="absolute w-52 h-52  left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-400/20 rounded-full blur-xl animate-pulse"></div> */}
-            {/* <div className="absolute w-40 h-40  left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-yellow-400/25 rounded-full blur-md animate-pulse"></div> */}
-
-            {/* Decorative elements */}
-            {/* <div className="absolute w-full h-full">
-              <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-yellow-300 rounded-full animate-ping"></div>
-              <div className="absolute top-3/4 left-1/3 w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
-              <div className="absolute top-1/3 right-1/4 w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-700"></div>
-              <div className="absolute bottom-1/4 right-1/3 w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-500"></div>
-              <div className="absolute top-1/2 left-1/5 w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-200"></div>
-            </div> */}
-
             {/* Microphone button with pulse animations */}
             <div className="relative">
-              {/* {isRecording && pulseEffects.small && (
-                <div className="absolute inset-0 -m-3 bg-yellow-400 opacity-30 rounded-full animate-ping"></div>
-              )}
-              {isRecording && pulseEffects.medium && (
-                <div className="absolute inset-0 -m-6 bg-yellow-500 opacity-20 rounded-full animate-pulse"></div>
-              )}
-              {isRecording && pulseEffects.large && (
-                <div className="absolute inset-0 -m-12 bg-yellow-600 opacity-10 rounded-full animate-pulse"></div>
-              )}
-              {isGlowing && (
-                <div className="absolute inset-0 -m-5 bg-yellow-400 opacity-50 rounded-full animate-ping"></div>
-              )}
-              {isGlowing && (
-                <div className="absolute inset-0 -m-10 bg-yellow-400 opacity-30 rounded-full animate-pulse"></div>
-              )} */}
               <button
                 onClick={handleMicClick}
                 className={`relative z-10 bg-black rounded-full w-36 h-36 flex items-center justify-center border-2 
