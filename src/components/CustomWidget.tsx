@@ -678,9 +678,9 @@ const CustomWidget = () => {
       );
 
       const product = response.data.response;
-      const product_url = product.url;
-      const product_name = product.name;
-      const product_description = product.description;
+      const product_url = product.url || "No URL found";
+      const product_name = product.name || "No Name found";
+      const product_description = product.description || "No Description found";
       return `Product Name: ${product_name}, Description: ${product_description}, Price: $${product.price}, URL: ${product_url}`;
     } catch (error) {
       console.error("Error in seeProduct:", error);
@@ -710,9 +710,9 @@ const CustomWidget = () => {
       );
 
       const collection = response.data.response;
-      const collection_url = collection.collection_url;
-      const collection_name = collection.matched_collection;
-      const collection_description = collection.description;
+      const collection_url = collection.collection_url || "No URL found";
+      const collection_name = collection.matched_collection || "No Name found";
+      const collection_description = collection.description || "No Description found";
       return `Collection Name: ${collection_name}, Description: ${collection_description}, URL: ${collection_url}`;
     } catch (error) {
       console.error("Error in seeProduct:", error);
