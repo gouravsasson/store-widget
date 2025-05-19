@@ -244,6 +244,7 @@ const CustomWidget = () => {
   // autostart on page refresh
   useEffect(() => {
     const callId = localStorage.getItem("callId");
+    console.log("callId", callId);
     if (callId && status === "disconnected" && !hasReconnected.current) {
       setIsMuted(true);
       handleMicClickForReconnect(callId);
@@ -251,7 +252,7 @@ const CustomWidget = () => {
     } else if (status === "listening" && callId && isMuted && !expanded) {
       session.muteSpeaker();
     }
-  }, [status]);
+  }, []);
 
   const handleMicClickForReconnect = async (id) => {
     console.log("handleMicClickForReconnect");
@@ -474,11 +475,12 @@ const CustomWidget = () => {
           prior_call_ids: callSessionId,
         }
       );
+      localStorage.clear();
+
       hasClosed.current = false;
 
       setTranscripts(null);
       toggleVoice(false);
-      localStorage.clear();
     } else {
       setExpanded(!expanded);
     }
