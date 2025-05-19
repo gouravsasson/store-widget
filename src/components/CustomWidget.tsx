@@ -681,13 +681,7 @@ const CustomWidget = () => {
       const product_url = product.url;
       const product_name = product.name;
       const product_description = product.description;
-      if (product_url) {
-        localStorage.setItem("product_name", product_name);
-        localStorage.setItem("product_description", product_description);
-
-        window.location.assign(product_url); // Open the product URL in a new tab
-      }
-      return `Description: ${product.description}, Price: $${product.price}`;
+      return `Product Name: ${product_name}, Description: ${product_description}, Price: $${product.price}, URL: ${product_url}`;
     } catch (error) {
       console.error("Error in seeProduct:", error);
       return "Error occurred while retrieving the product.";
@@ -719,16 +713,23 @@ const CustomWidget = () => {
       const collection_url = collection.collection_url;
       const collection_name = collection.matched_collection;
       const collection_description = collection.description;
-      if (collection_url) {
-        localStorage.setItem("collection_name", collection_name);
-        localStorage.setItem("collection_description", collection_description);
-        window.location.assign(collection_url); // Open the product URL in a new tab
-      }
-      return `Description: ${collection.description}`;
+      return `Collection Name: ${collection_name}, Description: ${collection_description}, URL: ${collection_url}`;
     } catch (error) {
       console.error("Error in seeProduct:", error);
       return "Error occurred while retrieving the product.";
     }
+  };
+
+  const seeProduct = async (parameters: any): Promise<string> => {
+    const product_link = parameters.product_link;
+    window.location.assign(product_link);
+    return "Product opened";
+  };
+
+  const seeCollection = async (parameters: any): Promise<string> => {
+    const collection_link = parameters.collection_link;
+    window.location.assign(collection_link);
+    return "Collection opened";
   };
 
   // Function that implements the logic for the 'search_product' tool
@@ -843,6 +844,8 @@ const CustomWidget = () => {
     window.location.assign(window.location.origin + "/cart");
     return "Cart opened";
   }
+
+
   // Register the client-side tools
   sessionRef.current.registerToolImplementation(
     "search_product",
@@ -858,6 +861,8 @@ const CustomWidget = () => {
   sessionRef.current.registerToolImplementation("buy_now", buyNow);
   sessionRef.current.registerToolImplementation("add_to_cart", addToCart);
   sessionRef.current.registerToolImplementation("open_cart", openCart);
+  sessionRef.current.registerToolImplementation("see_product", seeProduct);
+  sessionRef.current.registerToolImplementation("see_collection", seeCollection);
 
   if (!onlyOnce.current || !widgetTheme) {
     return null; // Or return <div>Loading...</div>
