@@ -679,9 +679,9 @@ const CustomWidget = () => {
 
       const product = response.data.response;
       const product_url = product.url || "No URL found";
-      const product_name = product.name || "No Name found";
+      const product_title = product.title || "No Name found";
       const product_description = product.description || "No Description found";
-      return `Product Name: ${product_name}, Description: ${product_description}, Price: $${product.price}, URL: ${product_url}`;
+      return `Product Name: ${product_tite}, Description: ${product_description}, Price: Rs${product.price}, URL: ${product_url}`;
     } catch (error) {
       console.error("Error in seeProduct:", error);
       return "Error occurred while retrieving the product.";
