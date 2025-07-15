@@ -68,6 +68,10 @@ const CustomWidget = () => {
     large: false,
   });
   const [message, setMessage] = useState("");
+  const [productUrls, setProductUrls] = useState<string[]>([]);
+  const [iframeErrors, setIframeErrors] = useState<{ [key: number]: boolean }>(
+    {}
+  );
   const hasReconnected = useRef(false);
   const hasClosed = useRef(false);
   const { callSessionIds, setCallSessionIds } = useSessionStore();
@@ -87,9 +91,9 @@ const CustomWidget = () => {
     setStatus,
   } = useUltravoxStore();
   const baseurl = "https://shop.snowie.ai";
-  // const {agent_id,schema}=useWidgetContext()
-  const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
-  const schema = "manant123";
+  const {agent_id,schema}=useWidgetContext()
+  // const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
+  // const schema = "manant123";
   let existingCallSessionIds: string[] = [];
   const AutoStartref = useRef(false);
   const storedIds = localStorage.getItem("callSessionId");
@@ -211,6 +215,8 @@ const CustomWidget = () => {
           localStorage.clear();
           setTranscripts(null);
           toggleVoice(false);
+          setProductUrls([]);
+          setIframeErrors({});
           widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
         };
         handleClose();
@@ -554,7 +560,8 @@ const CustomWidget = () => {
 
   interface ProductParameters {
     productId?: string;
-    query?: string;
+    title?: string;
+    description?: string;
   }
 
   interface CollectionParameters {
@@ -571,7 +578,9 @@ const CustomWidget = () => {
         {
           schema_name: schema,
           call_session_id: callSessionIds,
-          query: parameters.query || "",
+          title: parameters.title || "",
+          query: parameters.title || "",
+          description: parameters.description || "",
           top_k: 1,
         },
         {
@@ -581,11 +590,13 @@ const CustomWidget = () => {
           },
         }
       );
-      const product = response.data.response;
+      const product = response.data.response[0];
       const product_url = product.url || "No URL found";
       const product_title = product.title || "No Name found";
       const product_description = product.description || "No Description found";
       const prodcut_response = `Product Name: ${product_title}, Description: ${product_description}, Price: Rs${product.price}, URL: ${product_url}`;
+      setProductUrls((prev) => [...prev, product_url]);
+      setExpanded(true);
       console.log("prodcut_response", prodcut_response);
       return prodcut_response;
     } catch (error) {
@@ -965,24 +976,71 @@ const CustomWidget = () => {
             ) : (
               <>
                 {/* Microphone Section */}
-                <div className="flex flex-col items-center justify-center py-8">
-                  <button
-                    onClick={handleMicClick}
-                    disabled={widgetTheme?.bot_show_form && showform}
-                    className="w-40 h-40 rounded-full flex items-center justify-center transition-all hover:scale-105 shadow-lg mb-6"
-                    style={{ backgroundColor: widgetTheme?.bot_button_color }}
-                  >
-                    {renderIcon("w-16 h-16")}
-                  </button>
-                  <div
-                    className="px-6 py-2 rounded-full text-sm font-medium"
-                    style={{
-                      backgroundColor: widgetTheme?.bot_status_bar_color,
-                      color: widgetTheme?.bot_status_bar_text_color,
-                    }}
-                  >
-                    {speech}
-                  </div>
+                 <div className="flex flex-col items-center justify-center py-6">
+                  {productUrls.length > 0 ? (
+                    <div className="w-full max-h-64 overflow-y-auto px-6 space-y-4">
+                      {productUrls.map((url, index) => (
+                        <div key={index} className="relative">
+                          {iframeErrors[index] ? (
+                            <div className="p-4 bg-red-50 rounded-xl border border-red-200 text-red-600 text-sm">
+                              Failed to load product page.{" "}
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline"
+                              >
+                                Open in new tab
+                              </a>
+                            </div>
+                          ) : (
+                            <>
+                              <iframe
+                                src={url}
+                                title={`Product ${index + 1}`}
+                                className="w-full h-48 rounded-xl border border-gray-300 shadow-sm"
+                                style={{ minHeight: "192px" }}
+                                onError={() => {
+                                  setIframeErrors((prev) => ({
+                                    ...prev,
+                                    [index]: true,
+                                  }));
+                                }}
+                              />
+                              <a
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-blue-600 hover:underline mt-1 block text-center"
+                              >
+                                Open in new tab
+                              </a>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleMicClick}
+                        disabled={widgetTheme?.bot_show_form && showform}
+                        className="w-40 h-40 rounded-full flex items-center justify-center transition-all hover:scale-105 shadow-lg mb-4"
+                        style={{ backgroundColor: widgetTheme?.bot_button_color }}
+                      >
+                        {renderIcon("w-16 h-16")}
+                      </button>
+                      <div
+                        className="px-6 py-2 rounded-full text-sm font-medium"
+                        style={{
+                          backgroundColor: widgetTheme?.bot_status_bar_color,
+                          color: widgetTheme?.bot_status_bar_text_color,
+                        }}
+                      >
+                        {speech}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Transcription Box */}
@@ -1000,7 +1058,7 @@ const CustomWidget = () => {
                     </div>
                   </div>
                 )}
-
+               
                 {/* Input Area */}
                 {widgetTheme?.bot_show_chat && (
                   <div className="p-6 pt-0">
