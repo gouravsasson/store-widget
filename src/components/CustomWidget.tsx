@@ -8,8 +8,9 @@ import {
   Loader2,
   User,
   Mail,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
-import { MicOff } from "lucide-react";
 import axios from "axios";
 import { UltravoxSession } from "ultravox-client";
 import { useWidgetContext } from "../constexts/WidgetContext";
@@ -50,13 +51,10 @@ export interface WidgetTheme {
 const CustomWidget = () => {
   const [widgetTheme, setWidgetTheme] = useState<WidgetTheme | null>(null);
   const countryCode = localStorage.getItem("countryCode");
-
   const continentcode = localStorage.getItem("continentcode");
-
   const [expanded, setExpanded] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [isRecording, setIsRecording] = useState(false);
-  // const [transcription, setTranscription] = useState("");
   const containerRef = useRef(null);
   const [isGlowing, setIsGlowing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -72,7 +70,6 @@ const CustomWidget = () => {
   const [message, setMessage] = useState("");
   const hasReconnected = useRef(false);
   const hasClosed = useRef(false);
-
   const { callSessionIds, setCallSessionIds } = useSessionStore();
   const [formData, setFormData] = useState({
     name: "",
@@ -80,7 +77,6 @@ const CustomWidget = () => {
     phone: "",
   });
   const [phoneError, setPhoneError] = useState("");
-
   const {
     setSession,
     transcripts,
@@ -91,17 +87,16 @@ const CustomWidget = () => {
     setStatus,
   } = useUltravoxStore();
   const baseurl = "https://shop.snowie.ai";
-  const { agent_id, schema } = useWidgetContext();
-
-  // const agent_id = "68ec3404-7c46-4028-b7f3-42bae5c4976f";
-  // const schema = "6af30ad4-a50c-4acc-8996-d5f562b6987f";
+  // const {agent_id,schema}=useWidgetContext()
+  const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
+  const schema = "manant123";
   let existingCallSessionIds: string[] = [];
   const AutoStartref = useRef(false);
   const storedIds = localStorage.getItem("callSessionId");
-
   const debugMessages = new Set(["debug"]);
   const onlyOnce = useRef(false);
   const [showform, setShowform] = useState(false);
+
   useEffect(() => {
     if (widgetTheme?.bot_show_form) {
       setShowform(true);
@@ -110,7 +105,6 @@ const CustomWidget = () => {
 
   useEffect(() => {
     if (onlyOnce.current) return;
-
     const getWidgetTheme = async () => {
       try {
         const response = await axios.get(
@@ -123,7 +117,6 @@ const CustomWidget = () => {
         console.error("Failed to fetch widget theme:", error);
       }
     };
-
     getWidgetTheme();
   }, []);
 
@@ -149,13 +142,13 @@ const CustomWidget = () => {
       const handleVisibilityChange = () => {
         if (document.visibilityState === "hidden") {
           session.muteSpeaker();
+          setIsMuted(true);
         } else if (document.visibilityState === "visible") {
           session.unmuteSpeaker();
+          setIsMuted(false);
         }
       };
-
       document.addEventListener("visibilitychange", handleVisibilityChange);
-
       return () => {
         document.removeEventListener(
           "visibilitychange",
@@ -170,57 +163,42 @@ const CustomWidget = () => {
     sessionRef.current = new UltravoxSession({
       experimentalMessages: debugMessages,
     });
-
     setSession(sessionRef.current);
   }
-
   const session = sessionRef.current;
 
   const handleSubmit = () => {
-    if (status != "disconnected") {
+    if (status !== "disconnected") {
       session.sendText(`${message}`);
       setMessage("");
     }
   };
 
   useEffect(() => {
-    // Set flag when page is about to refresh
     const handleBeforeUnload = () => {
       sessionStorage.setItem("isRefreshing", "true");
     };
-
-    // Clear flag when page loads (this will execute after refresh)
     const clearRefreshFlag = () => {
       sessionStorage.removeItem("isRefreshing");
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     window.addEventListener("load", clearRefreshFlag);
-
-    // Initial cleanup of any leftover flag
     clearRefreshFlag();
-
-    // Cleanup listeners
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
       window.removeEventListener("load", clearRefreshFlag);
     };
   }, []);
 
-  // disconnecting
   useEffect(() => {
     if (status === "disconnecting" && !hasClosed.current) {
-      // Only run cleanup if this isn't a page refresh
       const isPageRefresh = sessionStorage.getItem("isRefreshing") === "true";
-
       if (!isPageRefresh) {
         const callSessionId = JSON.parse(
           localStorage.getItem("callSessionId") || "[]"
         );
-
         const handleClose = async () => {
           await session.leaveCall();
-
           const response = await axios.post(
             `${baseurl}/api/shopify/end-call-session-thunder/`,
             {
@@ -235,16 +213,13 @@ const CustomWidget = () => {
           toggleVoice(false);
           widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
         };
-
         handleClose();
       }
     }
   }, [status]);
 
-  // autostart on page refresh
   useEffect(() => {
     const callId = localStorage.getItem("callId");
-    console.log("callId", callId);
     if (callId && status === "disconnected" && !hasReconnected.current) {
       setIsMuted(true);
       handleMicClickForReconnect(callId);
@@ -255,8 +230,6 @@ const CustomWidget = () => {
   }, []);
 
   const handleMicClickForReconnect = async (id) => {
-    console.log("handleMicClickForReconnect");
-
     try {
       const response = await axios.post(
         `${baseurl}/api/shopify/start-thunder/`,
@@ -266,37 +239,27 @@ const CustomWidget = () => {
           prior_call_id: id,
         }
       );
-
       const wssUrl = response.data.joinUrl;
       const callId = response.data.callId;
-
       localStorage.setItem("callId", callId);
-      // setCallId(callId);
       setCallSessionIds(response.data.call_session_id);
       if (storedIds) {
         try {
           const parsedIds = JSON.parse(storedIds);
-          // Ensure it's actually an array
           if (Array.isArray(parsedIds)) {
             existingCallSessionIds = parsedIds;
           }
         } catch (parseError) {
           console.warn("Could not parse callSessionId:", parseError);
-          // Optional: clear invalid data
           localStorage.removeItem("callSessionId");
         }
       }
-
-      // Append the new ID
       existingCallSessionIds.push(callId);
-
-      // Store back in localStorage
       localStorage.setItem(
         "callSessionId",
         JSON.stringify(existingCallSessionIds)
       );
       setShowform(false);
-
       if (wssUrl) {
         session.joinCall(`${wssUrl}`);
       }
@@ -305,9 +268,7 @@ const CustomWidget = () => {
     }
   };
 
-  // Handle mic button click
   const handleMicClick = async () => {
-    console.log("running handleMicClick");
     try {
       if (status === "disconnected") {
         const response = await axios.post(
@@ -317,7 +278,6 @@ const CustomWidget = () => {
             schema_name: schema,
           }
         );
-
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
         localStorage.setItem("callId", callId);
@@ -327,26 +287,19 @@ const CustomWidget = () => {
         if (storedIds) {
           try {
             const parsedIds = JSON.parse(storedIds);
-            // Ensure it's actually an array
             if (Array.isArray(parsedIds)) {
               existingCallSessionIds = parsedIds;
             }
           } catch (parseError) {
             console.warn("Could not parse callSessionId:", parseError);
-            // Optional: clear invalid data
             localStorage.removeItem("callSessionId");
           }
         }
-
-        // Append the new ID
         existingCallSessionIds.push(callId);
-
-        // Store back in localStorage
         localStorage.setItem(
           "callSessionId",
           JSON.stringify(existingCallSessionIds)
         );
-
         if (wssUrl) {
           session.joinCall(`${wssUrl}`);
           if (AutoStartref.current) {
@@ -371,7 +324,7 @@ const CustomWidget = () => {
         widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
       }
     } catch (error) {
-      // console.error("Error in handleMicClick:", error);
+      console.error("Error in handleMicClick:", error);
     }
   };
 
@@ -385,42 +338,33 @@ const CustomWidget = () => {
 
   session.addEventListener("transcripts", (event) => {
     const alltrans = session.transcripts;
-
     let Trans = "";
-
     for (let index = 0; index < alltrans.length; index++) {
       const currentTranscript = alltrans[index];
-
       Trans = currentTranscript.text;
-
       if (currentTranscript) {
         setTranscripts(Trans);
       }
     }
   });
 
-  // Listen for status changing events
   session.addEventListener("status", (event) => {
     setStatus(session.status);
   });
 
   session.addEventListener("experimental_message", (msg) => {});
 
-  // Animated pulse effects for recording state
   useEffect(() => {
     if (isRecording) {
       const smallPulse = setInterval(() => {
         setPulseEffects((prev) => ({ ...prev, small: !prev.small }));
       }, 1000);
-
       const mediumPulse = setInterval(() => {
         setPulseEffects((prev) => ({ ...prev, medium: !prev.medium }));
       }, 1500);
-
       const largePulse = setInterval(() => {
         setPulseEffects((prev) => ({ ...prev, large: !prev.large }));
       }, 2000);
-
       return () => {
         clearInterval(smallPulse);
         clearInterval(mediumPulse);
@@ -430,43 +374,41 @@ const CustomWidget = () => {
   }, [isRecording]);
 
   const toggleExpand = () => {
-    if (widgetTheme?.bot_show_form) {
+    if (widgetTheme?.bot_show_form && !showform) {
       setExpanded(!expanded);
       return;
     }
     if (status === "disconnected") {
       setSpeech(`Connecting To ${widgetTheme?.bot_name}`);
-
       handleMicClick();
     }
     if (session.isSpeakerMuted) {
       setIsMuted(false);
       session.unmuteSpeaker();
     }
-
     setExpanded(!expanded);
   };
+
   const togglemute = () => {
-    setExpanded(!expanded);
+    setExpanded(false);
     if (widgetTheme?.bot_mute_on_minimize) {
       if (session.isSpeakerMuted) {
         session.unmuteSpeaker();
+        setIsMuted(false);
       } else {
         session.muteSpeaker();
+        setIsMuted(true);
       }
     }
   };
 
   const handleClose = async () => {
-    console.log("status", status);
     if (status !== "disconnected") {
       hasClosed.current = true;
       const callSessionId = JSON.parse(localStorage.getItem("callSessionId"));
-      console.log("callSessionId", callSessionId);
       setExpanded(false);
       await session.leaveCall();
       widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
-
       const response = await axios.post(
         `${baseurl}/api/shopify/end-call-session-thunder/`,
         {
@@ -476,18 +418,17 @@ const CustomWidget = () => {
         }
       );
       localStorage.clear();
-
       hasClosed.current = false;
-
       setTranscripts(null);
       toggleVoice(false);
     } else {
-      setExpanded(!expanded);
+      setExpanded(false);
     }
   };
 
   const toggleVoice = (data) => {
     setIsListening(data);
+    setIsRecording(data);
   };
 
   useEffect(() => {
@@ -498,43 +439,21 @@ const CustomWidget = () => {
   }, [transcripts]);
 
   const getWidgetStyles = () => {
-    const styles = {
+    const styles: React.CSSProperties = {
       position: "fixed",
       zIndex: 1000,
       display: "flex",
       flexDirection: "column",
+      alignItems: "flex-end",
     };
-
-    // Responsive size adjustments
-    const maxWidthPx = 400;
-    const maxHeightPx = 600;
-    const minWidthPx = 250;
-    const minHeightPx = 200;
-
-    // Adjust size based on content
-    const hasTranscription = widgetTheme?.bot_show_transcript;
-    const hasChat = widgetTheme?.bot_show_chat;
-    let contentFactor = 1;
-    if (!hasTranscription && !hasChat) {
-      contentFactor = 0.6;
-    } else if (!hasTranscription || !hasChat) {
-      contentFactor = 0.8;
+    if (expanded) {
+      styles.width = "400px";
+      styles.height =
+        widgetTheme?.bot_show_form && showform ? "550px" : "600px";
+    } else {
+      styles.width = "160px";
+      styles.height = "80px";
     }
-
-    //   );
-    //   calculatedHeight = Math.max(
-    //     minHeightPx,
-    //     Math.min(calculatedHeight, maxHeightPx)
-    //   );
-
-    //   styles.width = `${calculatedWidth}px`;
-    //   styles.height = `${calculatedHeight}px`;
-    // } else {
-    //   styles.width = "64px";
-    //   styles.height = "64px";
-    // }
-
-    // Apply position
     switch (widgetTheme?.bot_position) {
       case "top-left":
         styles.top = "20px";
@@ -550,26 +469,22 @@ const CustomWidget = () => {
         styles.right = "20px";
         break;
       case "bottom-left":
-        styles.bottom = "20px";
+        styles.bottom = "40px";
         styles.left = "20px";
         break;
       case "bottom-center":
-        styles.bottom = "20px";
+        styles.bottom = "40px";
         styles.left = "50%";
         styles.transform = expanded ? "translateX(-50%)" : "none";
         break;
       case "bottom-right":
-        styles.bottom = "24px";
+        styles.bottom = "44px";
         styles.right = "24px";
-
         break;
       default:
-        styles.bottom = "20px";
+        styles.bottom = "40px";
         styles.right = "20px";
     }
-
-    styles;
-
     return styles;
   };
 
@@ -587,7 +502,6 @@ const CustomWidget = () => {
             email: formData.email,
           }
         );
-
         const wssUrl = response.data.joinUrl;
         const callId = response.data.callId;
         localStorage.setItem("callId", callId);
@@ -597,26 +511,19 @@ const CustomWidget = () => {
         if (storedIds) {
           try {
             const parsedIds = JSON.parse(storedIds);
-            // Ensure it's actually an array
             if (Array.isArray(parsedIds)) {
               existingCallSessionIds = parsedIds;
             }
           } catch (parseError) {
             console.warn("Could not parse callSessionId:", parseError);
-            // Optional: clear invalid data
             localStorage.removeItem("callSessionId");
           }
         }
-
-        // Append the new ID
         existingCallSessionIds.push(callId);
-
-        // Store back in localStorage
         localStorage.setItem(
           "callSessionId",
           JSON.stringify(existingCallSessionIds)
         );
-
         if (wssUrl) {
           session.joinCall(`${wssUrl}`);
           if (AutoStartref.current) {
@@ -641,11 +548,10 @@ const CustomWidget = () => {
         widgetTheme?.bot_show_form ? setShowform(true) : setShowform(false);
       }
     } catch (error) {
-      // console.error("Error in handleMicClick:", error);
+      console.error("Error in handleMicClick:", error);
     }
   };
 
-  // Define the type for parameters with optional properties
   interface ProductParameters {
     productId?: string;
     query?: string;
@@ -656,7 +562,6 @@ const CustomWidget = () => {
     query?: string;
   }
 
-  // Function that implements the logic for the 'show_product' tool
   const showProduct = async (
     parameters: ProductParameters
   ): Promise<string> => {
@@ -676,7 +581,6 @@ const CustomWidget = () => {
           },
         }
       );
-
       const product = response.data.response;
       const product_url = product.url || "No URL found";
       const product_title = product.title || "No Name found";
@@ -690,7 +594,6 @@ const CustomWidget = () => {
     }
   };
 
-  // Function that implements the logic for the 'show_product' tool
   const showCollection = async (
     parameters: CollectionParameters
   ): Promise<string> => {
@@ -710,11 +613,11 @@ const CustomWidget = () => {
           },
         }
       );
-
       const collection = response.data.response;
       const collection_url = collection.collection_url || "No URL found";
       const collection_name = collection.matched_collection || "No Name found";
-      const collection_description = collection.description || "No Description found";
+      const collection_description =
+        collection.description || "No Description found";
       const collection_response = `Collection Name: ${collection_name}, Description: ${collection_description}, URL: ${collection_url}`;
       console.log("collection_response", collection_response);
       return collection_response;
@@ -736,7 +639,6 @@ const CustomWidget = () => {
     return "Collection opened";
   };
 
-  // Function that implements the logic for the 'search_product' tool
   const searchProduct = async (
     parameters: ProductParameters
   ): Promise<string> => {
@@ -754,10 +656,9 @@ const CustomWidget = () => {
           },
         }
       );
-
       const searchUrl = response.data.search_url;
       if (searchUrl) {
-        window.location.assign(searchUrl); // Open the search URL in a new tab
+        window.location.assign(searchUrl);
         return `Successfully opened the search URL`;
       }
     } catch (error) {
@@ -767,30 +668,27 @@ const CustomWidget = () => {
     return "No search URL found.";
   };
 
-  function scrollUp(): string {
+  const scrollUp = (): string => {
     window.scrollBy({
-      top: -300, // Scrolls up by 300 pixels
+      top: -300,
       behavior: "smooth",
     });
-    return "Scrolled up "; // Return a string or appropriate type
-  }
+    return "Scrolled up";
+  };
 
-  function scrollDown(): string {
+  const scrollDown = (): string => {
     window.scrollBy({
-      top: 300, // Scrolls down by 300 pixels
+      top: 300,
       behavior: "smooth",
     });
-    return "Scrolled down"; // Return a string or appropriate type
-  }
+    return "Scrolled down";
+  };
 
-  function buyNow(): string {
-    // Find the button element by its class name
+  const buyNow = (): string => {
     const button = document.querySelector(
       ".shopify-payment-button__button--unbranded"
     );
-
     const product_url = window.location.href;
-    // Make an API call to mark the product as converted
     axios
       .post(`${baseurl}/api/shopify/mark-product-converted/`, {
         product_url: product_url,
@@ -803,25 +701,19 @@ const CustomWidget = () => {
       .catch((error) => {
         console.error("Error marking product as converted:", error);
       });
-
-    // If the button exists, simulate a click
     if (button) {
       button.click();
-      return "Button clicked"; // Return a message when the button is clicked
+      return "Button clicked";
     } else {
-      return "Button not found"; // Return an error message if the button is not found
+      return "Button not found";
     }
-  }
+  };
 
-  function addToCart(): string {
+  const addToCart = (): string => {
     const product_url = window.location.href;
-
-    // Find the button element by its ID
     const button = document.getElementById(
       "ProductSubmitButton-template--24466834784574__main"
     );
-
-    // Make an API call to mark the product as converted
     axios
       .post(`${baseurl}/api/shopify/mark-product-converted/`, {
         product_url: product_url,
@@ -834,23 +726,19 @@ const CustomWidget = () => {
       .catch((error) => {
         console.error("Error marking product as converted:", error);
       });
-
-    // If the button exists, simulate a click
     if (button) {
       button.click();
-      return "Add to Cart button clicked"; // Return a message when the button is clicked
+      return "Add to Cart button clicked";
     } else {
-      return "Add to Cart button not found"; // Return an error message if the button is not found
+      return "Add to Cart button not found";
     }
-  }
+  };
 
-  function openCart(): string {
+  const openCart = (): string => {
     window.location.assign(window.location.origin + "/cart");
     return "Cart opened";
-  }
+  };
 
-
-  // Register the client-side tools
   sessionRef.current.registerToolImplementation(
     "search_product",
     searchProduct
@@ -866,140 +754,125 @@ const CustomWidget = () => {
   sessionRef.current.registerToolImplementation("add_to_cart", addToCart);
   sessionRef.current.registerToolImplementation("open_cart", openCart);
   sessionRef.current.registerToolImplementation("see_product", seeProduct);
-  sessionRef.current.registerToolImplementation("see_collection", seeCollection);
+  sessionRef.current.registerToolImplementation(
+    "see_collection",
+    seeCollection
+  );
 
   if (!onlyOnce.current || !widgetTheme) {
-    return null; // Or return <div>Loading...</div>
+    return <div className="text-white text-center">Loading...</div>;
   }
+
+  const renderIcon = (className: string) => {
+    if (widgetTheme?.bot_logo) {
+      return (
+        <img
+          src={widgetTheme.bot_logo}
+          alt="Custom Icon"
+          className={className}
+          style={{ objectFit: "contain" }}
+        />
+      );
+    }
+    return (
+      <Mic
+        className={className}
+        style={{ color: widgetTheme?.bot_icon_color }}
+      />
+    );
+  };
 
   return (
     <div style={getWidgetStyles()} className="flex flex-col items-end">
       {expanded ? (
         <div
-          className={`bg-gray-900/50 backdrop-blur-sm w-[309px]  rounded-2xl shadow-2xl overflow-hidden border ${
-            widgetTheme?.bot_show_form ? "h-[550px]" : "h-[521px]"
-          }`}
+          className="bg-white rounded-3xl shadow-2xl overflow-hidden"
           style={{
+            width: "400px",
+            height: widgetTheme?.bot_show_form && showform ? "550px" : "600px",
             backgroundColor: widgetTheme?.bot_background_color,
             borderColor: widgetTheme?.bot_border_color,
           }}
         >
-          {/* Header with glow effect */}
+          {/* Header */}
           <div
-            className="relative p-4 flex justify-between items-center "
-            style={{
-              backgroundColor: widgetTheme?.bot_bubble_color,
-              borderBottom: `1px solid ${widgetTheme?.bot_border_color}`,
-            }}
+            className="px-6 py-4 flex justify-between items-center"
+            style={{ backgroundColor: widgetTheme?.bot_bubble_color }}
           >
-            <div className="relative flex items-center">
+            <div className="flex items-center space-x-3">
               <div
-                className=" rounded-full w-8 h-8 flex items-center justify-center mr-2  shadow-lg"
-                style={{
-                  borderColor: widgetTheme?.bot_border_color,
-                }}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: widgetTheme?.bot_button_color }}
               >
-                <span className="text-yellow-400 font-bold text-xl">
-                  <img
-                    src={widgetTheme?.bot_logo}
-                    alt="logo"
-                    className="w-6 h-6"
-                  />
-                </span>
+                {renderIcon("w-5 h-5 rounded-full")}
               </div>
-              <span className="text-white font-bold text-lg">
-                {widgetTheme?.bot_name || "Voice Assistant"}
+              <span
+                className="font-semibold text-lg"
+                style={{ color: widgetTheme?.bot_text_color }}
+              >
+                {widgetTheme?.bot_name || "AI Assistant"}
               </span>
             </div>
-            <div className="relative flex space-x-2">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => {
+                  if (isMuted) {
+                    session.unmuteSpeaker();
+                    setIsMuted(false);
+                  } else {
+                    session.muteSpeaker();
+                    setIsMuted(true);
+                  }
+                }}
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors"
+              >
+                {isMuted ? (
+                  <VolumeX
+                    className="w-5 h-5"
+                    style={{ color: widgetTheme?.bot_text_color }}
+                  />
+                ) : (
+                  <Volume2
+                    className="w-5 h-5"
+                    style={{ color: widgetTheme?.bot_text_color }}
+                  />
+                )}
+              </button>
               <button
                 onClick={togglemute}
-                className="text-gray-300 transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors"
               >
                 <Minimize2
-                  size={18}
-                  style={{
-                    color: hovered
-                      ? widgetTheme?.bot_button_hover_color
-                      : widgetTheme?.bot_button_color,
-                    transition: "color 0.3s ease",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={() => setHovered(true)}
-                  onMouseLeave={() => setHovered(false)}
+                  className="w-5 h-5"
+                  style={{ color: widgetTheme?.bot_text_color }}
                 />
               </button>
               <button
                 onClick={handleClose}
-                className="text-gray-300 transition-colors"
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/10 transition-colors"
               >
                 <X
-                  size={18}
-                  style={{
-                    color: hovered
-                      ? widgetTheme?.bot_button_hover_color
-                      : widgetTheme?.bot_button_color,
-                    transition: "color 0.3s ease",
-                    cursor: "pointer",
-                  }}
-                  onMouseEnter={() => setHovered(true)}
-                  onMouseLeave={() => setHovered(false)}
+                  className="w-5 h-5"
+                  style={{ color: widgetTheme?.bot_text_color }}
                 />
               </button>
             </div>
           </div>
 
-          {/* Microphone Button with enhanced visual effects */}
-          <div className="pt-10 flex flex-col items-center justify-center relative overflow-hidden w-full ">
-            {/* Microphone button with pulse animations */}
-            <div className="relative">
-              <button
-                onClick={handleMicClick}
-                className={`relative z-10 bg-black rounded-full w-36 h-36 flex items-center justify-center border-2 
-                  // isGlowing
-                  //   ? "border-yellow-300 shadow-xl shadow-yellow-400/60"
-                  //   : "border-yellow-400 shadow-lg"
-                
-                  ${
-                    isRecording ? "scale-110" : "hover:scale-105"
-                  } backdrop-blur-sm`}
-                style={{
-                  backgroundColor: widgetTheme?.bot_bubble_color,
-                  borderColor: widgetTheme?.bot_border_color,
-                }}
-              >
-                {/* <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-yellow-900/20 rounded-full"></div>
-                <div className="absolute inset-0 bg-gradient-to-tr from-yellow-400/5 via-transparent to-transparent rounded-full"></div> */}
-                <div className="flex items-center justify-center">
-                  <span
-                    className={`text-yellow-400 font-bold text-6xl drop-shadow-xl tracking-tighter ${
-                      isRecording ? "animate-pulse" : ""
-                    }`}
-                  >
-                    <img
-                      src={widgetTheme?.bot_logo || logo}
-                      alt="logo"
-                      className="w-20 h-20"
-                    />
-                  </span>
-                </div>
-              </button>
-            </div>
-
-            <p
-              className="text-yellow-400 text-sm mt-5 font-medium drop-shadow-md bg-black/30 px-4 py-1 rounded-full backdrop-blur-sm border border-yellow-400/20"
-              style={{
-                backgroundColor: widgetTheme?.bot_status_bar_color,
-                borderColor: widgetTheme?.bot_border_color,
-                color: widgetTheme?.bot_status_bar_text_color,
-              }}
-            >
-              {speech}
-            </p>
-
-            {showform ? (
-              <form onSubmit={startfromform}>
-                <div className="flex flex-col gap-4 m-4">
+          {/* Main Content */}
+          <div
+            className="flex flex-col h-full bg-gray-50"
+            style={{ height: "calc(100% - 80px)" }}
+          >
+            {widgetTheme?.bot_show_form && showform ? (
+              <div className="flex flex-col items-center justify-center h-full p-6">
+                <h3 className="text-lg font-semibold mb-6 text-gray-800">
+                  Enter Your Details
+                </h3>
+                <form
+                  onSubmit={startfromform}
+                  className="w-full max-w-sm space-y-4"
+                >
                   {[
                     {
                       icon: <User className="h-5 w-5 text-gray-400" />,
@@ -1007,7 +880,6 @@ const CustomWidget = () => {
                       type: "text",
                       placeholder: "Your name",
                       key: "name",
-                      component: "",
                     },
                     {
                       icon: <Mail className="h-5 w-5 text-gray-400" />,
@@ -1015,113 +887,124 @@ const CustomWidget = () => {
                       type: "email",
                       placeholder: "Email address",
                       key: "email",
-                      component: "",
+                    },
+                    {
+                      value: formData.phone,
+                      type: "tel",
+                      placeholder: "Phone number",
+                      key: "phone",
+                      component: (
+                        <PhoneInput
+                          dropdownClass="bottom-10 z-50"
+                          dropdownStyle={{ zIndex: 1000 }}
+                          inputProps={{
+                            name: "phone",
+                            required: true,
+                          }}
+                          country={`${continentcode?.toLowerCase()}`}
+                          value={formData.phone}
+                          onChange={(phone) => {
+                            setFormData({ ...formData, phone });
+                            setPhoneError("");
+                          }}
+                          enableSearch={true}
+                          containerClass="absolute inset-y-0 left-0"
+                          inputClass="!pl-16 !w-full !rounded-xl !border !border-gray-300 !focus:outline-none !focus:ring-2 !focus:ring-orange-400 !text-gray-700"
+                        />
+                      ),
                     },
                   ].map((field, index) => (
-                    <div className="relative" key={index}>
-                      <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
-                        {field.icon}
-                      </div>
-                      <div className="flex items-center">
-                        {field.component}
-                        <input
-                          type={field.type}
-                          required
-                          value={field.value}
-                          maxLength={field.maxLength}
-                          onChange={(e) => {
-                            let value = e.target.value;
-                            if (field.key === "phone") {
-                              value = value.replace(/\D/g, ""); // remove non-digit characters
+                    <div key={index} className="w-full">
+                      <div className="relative">
+                        {!field.component && (
+                          <div className="absolute inset-y-0 left-2 flex items-center pointer-events-none">
+                            {field.icon}
+                          </div>
+                        )}
+                        {field.component ? (
+                          field.component
+                        ) : (
+                          <input
+                            type={field.type}
+                            required
+                            value={field.value}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                [field.key]: e.target.value,
+                              })
                             }
-                            setFormData({ ...formData, [field.key]: value });
-                          }}
-                          className={`block w-full pl-12 pr-4 py-2 bg-gray-50 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 transition ${
-                            field.component && " rounded-l-none !pl-2 h-[40px]"
-                          }`}
-                          placeholder={field.placeholder}
-                        />
+                            placeholder={field.placeholder}
+                            className="w-full p-3 pl-10 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700"
+                          />
+                        )}
                       </div>
                     </div>
                   ))}
-                  <PhoneInput
-                    dropdownClass="bottom-10 z-50"
-                    dropdownStyle={{ zIndex: 1000 }}
-                    inputProps={{
-                      name: "phone",
-                      required: true,
-                    }}
-                    country={`${continentcode?.toLowerCase()}`}
-                    value={formData.phone}
-                    onChange={(phone) => {
-                      setFormData({ ...formData, phone });
-                      setPhoneError(""); // clear error as user types
-                    }}
-                    enableSearch={true}
-                  />
-
                   {phoneError && (
                     <div className="text-red-500 text-sm mt-1">
                       {phoneError}
                     </div>
                   )}
-
                   <button
                     type="submit"
-                    className="w-full bg-yellow-400 text-black font-semibold py-3 px-4 rounded-xl hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-2 transition-colors"
+                    className="w-full p-3 rounded-xl text-white transition-colors hover:opacity-90"
+                    style={{ backgroundColor: widgetTheme?.bot_button_color }}
                   >
                     {status === "connecting" ? (
                       <div className="flex items-center justify-center">
-                        <Loader2 className="w-5 h-5 animate-spin" /> Connecting
-                        to AI Assistant
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Connecting to AI Assistant
                       </div>
                     ) : (
                       "Connect to AI Assistant"
                     )}
                   </button>
-
-                  {/* {error && (
-                    <div className="text-red-500 text-center text-sm mt-2">
-                      {error}
-                    </div>
-                  )} */}
-                </div>
-              </form>
+                </form>
+              </div>
             ) : (
               <>
-                {/* Transcription Box with enhanced styling */}
+                {/* Microphone Section */}
+                <div className="flex flex-col items-center justify-center py-8">
+                  <button
+                    onClick={handleMicClick}
+                    disabled={widgetTheme?.bot_show_form && showform}
+                    className="w-40 h-40 rounded-full flex items-center justify-center transition-all hover:scale-105 shadow-lg mb-6"
+                    style={{ backgroundColor: widgetTheme?.bot_button_color }}
+                  >
+                    {renderIcon("w-16 h-16")}
+                  </button>
+                  <div
+                    className="px-6 py-2 rounded-full text-sm font-medium"
+                    style={{
+                      backgroundColor: widgetTheme?.bot_status_bar_color,
+                      color: widgetTheme?.bot_status_bar_text_color,
+                    }}
+                  >
+                    {speech}
+                  </div>
+                </div>
+
+                {/* Transcription Box */}
                 {widgetTheme?.bot_show_transcript && (
-                  <div className="relative p-4 w-full ">
-                    <div className="absolute inset-0 "></div>
-                    <div className="relative">
-                      <div className="flex justify-between items-center mb-2">
-                        {/* <div className="text-yellow-400 text-sm font-medium">
-                  Real-time transcription
-                </div> */}
-                        {isRecording && (
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 bg-red-500 rounded-full mr-1 animate-pulse"></div>
-                            <span className="text-red-400 text-xs">LIVE</span>
-                          </div>
-                        )}
-                      </div>
-                      <div
-                        ref={containerRef}
-                        className=" bg-white backdrop-blur-sm rounded-xl p-4 h-16 text-white shadow-inner border border-gray-800 overflow-y-auto scrollbar-hide ring-yellow-400/80"
-                      >
-                        <div className="relative">
-                          <span className="text-black">{transcripts}</span>
-                        </div>
-                      </div>
+                  <div className="px-6 py-4 flex-1">
+                    <div
+                      ref={containerRef}
+                      className="bg-white rounded-2xl p-4 h-32 text-gray-600 shadow-inner border overflow-y-auto text-sm"
+                      style={{
+                        fontStyle: transcripts ? "normal" : "italic",
+                        color: transcripts ? "#374151" : "#9CA3AF",
+                      }}
+                    >
+                      {transcripts || "Your conversation will appear here..."}
                     </div>
                   </div>
                 )}
 
-                {/* Input Area with glass effect */}
+                {/* Input Area */}
                 {widgetTheme?.bot_show_chat && (
-                  <div className="relative p-3 ">
-                    <div className="absolute inset-0"></div>
-                    <div className="relative flex items-center space-x-2">
+                  <div className="p-6 pt-0">
+                    <div className="flex items-center space-x-3">
                       <input
                         type="text"
                         disabled={
@@ -1131,28 +1014,23 @@ const CustomWidget = () => {
                         onChange={(e) => setMessage(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter") {
-                            handleSubmit(e.target.value);
+                            handleSubmit();
                           }
                         }}
                         placeholder="Type your message..."
-                        className="flex-1 bg-white text-black p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400/80 placeholder-gray-500 border border-gray-700"
+                        className="flex-1 bg-white text-gray-700 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 placeholder-gray-400 border border-gray-200"
                       />
                       <button
                         type="button"
                         onClick={handleSubmit}
-                        className="p-3  rounded-xl  transition-colors shadow-md"
+                        className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors shadow-md"
                         style={{
                           backgroundColor: widgetTheme?.bot_button_color,
-                          borderColor: widgetTheme?.bot_border_color,
-                          color: widgetTheme?.bot_button_text_color,
                         }}
                       >
                         <Send
-                          size={20}
-                          className="text-black"
-                          style={{
-                            color: widgetTheme?.bot_button_text_color,
-                          }}
+                          className="w-5 h-5"
+                          style={{ color: widgetTheme?.bot_button_text_color }}
                         />
                       </button>
                     </div>
@@ -1163,53 +1041,29 @@ const CustomWidget = () => {
           </div>
         </div>
       ) : (
-        <>
-          <div className="flex flex-col items-center gap-1 justify-center">
-            <button
-              onClick={toggleExpand}
-              className="bg-black rounded-full w-20 h-20 flex items-center justify-center shadow-2xl border-2 border-yellow-400  transition-all hover:scale-110"
-              style={{
-                backgroundColor: widgetTheme?.bot_bubble_color,
-                borderColor: widgetTheme?.bot_border_color,
-              }}
-            >
-              <div className="relative">
-                {/* <div
-                  className="absolute inset-0 -m-1 bg-yellow-400/40 rounded-full animate-ping"
-                  style={{
-                    backgroundColor: widgetTheme?.bot_animation_color,
-                  }}
-                ></div>
-                <div
-                  className="absolute inset-0 -m-3 bg-yellow-400/20 rounded-full animate-pulse"
-                  style={{
-                    backgroundColor: widgetTheme?.bot_animation_color,
-                  }}
-                ></div> */}
-                <span className="text-yellow-400 font-bold text-3xl relative z-10 drop-shadow-xl tracking-tighter">
-                  <img
-                    src={widgetTheme?.bot_logo || logo}
-                    alt="logo"
-                    className="w-[54px] h-[54px]"
-                  />
-                </span>
-              </div>
-            </button>
-            <button
-              onClick={toggleExpand}
-              className="inline-block  px-4 py-1 bg-black text-[#FFD700] border-2 border-[#FFD700] rounded-full font-inter font-bold text-sm no-underline text-center transition-all duration-300 "
-              style={{
-                backgroundColor: widgetTheme?.bot_bubble_color,
-                borderColor: widgetTheme?.bot_border_color,
-                color: widgetTheme?.bot_border_color,
-              }}
-            >
-              TALK TO {widgetTheme?.bot_name}
-            </button>
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={toggleExpand}
+            className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all hover:scale-110"
+            style={{ backgroundColor: widgetTheme?.bot_button_color }}
+          >
+            {renderIcon("w-6 h-6")}
+          </button>
+          <div
+            className="px-auto py-2 rounded-full text-sm font-medium shadow-lg text-center"
+            style={{
+              backgroundColor: widgetTheme?.bot_button_color,
+              color: widgetTheme?.bot_button_text_color,
+            }}
+          >
+            <p className="px-2">
+              Talk to {widgetTheme?.bot_name || "AI Assistant"}
+            </p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 };
+
 export default CustomWidget;
