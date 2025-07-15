@@ -91,9 +91,9 @@ const CustomWidget = () => {
     setStatus,
   } = useUltravoxStore();
   const baseurl = "https://shop.snowie.ai";
-  const {agent_id,schema}=useWidgetContext()
-  // const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
-  // const schema = "manant123";
+  // const {agent_id,schema}=useWidgetContext()
+  const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
+  const schema = "manant123";
   let existingCallSessionIds: string[] = [];
   const AutoStartref = useRef(false);
   const storedIds = localStorage.getItem("callSessionId");
@@ -581,7 +581,7 @@ const CustomWidget = () => {
           title: parameters.title || "",
           query: parameters.title || "",
           description: parameters.description || "",
-          top_k: 1,
+          top_k: 5,
         },
         {
           headers: {
