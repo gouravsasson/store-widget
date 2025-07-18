@@ -69,9 +69,7 @@ const CustomWidget = () => {
   });
   const [message, setMessage] = useState("");
   const [productUrls, setProductUrls] = useState<string[]>([]);
-  const [iframeErrors, setIframeErrors] = useState<{ [key: number]: boolean }>(
-    {}
-  );
+  const [iframeErrors, setIframeErrors] = useState<{ [key: number]: boolean }>({});
   const hasReconnected = useRef(false);
   const hasClosed = useRef(false);
   const { callSessionIds, setCallSessionIds } = useSessionStore();
@@ -90,8 +88,8 @@ const CustomWidget = () => {
     status,
     setStatus,
   } = useUltravoxStore();
-  const baseurl = "https://shop.snowie.ai";
   const {agent_id,schema}=useWidgetContext()
+  const baseurl = "https://shop.snowie.ai";
   // const agent_id = "6510fa25-8cd4-46f3-88d6-12a47bde1cba";
   // const schema = "manant123";
   let existingCallSessionIds: string[] = [];
@@ -100,6 +98,68 @@ const CustomWidget = () => {
   const debugMessages = new Set(["debug"]);
   const onlyOnce = useRef(false);
   const [showform, setShowform] = useState(false);
+const widgetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (widgetRef.current && !widgetRef.current.shadowRoot) {
+      // Attach Shadow DOM
+      const shadow = widgetRef.current.attachShadow({ mode: "open" });
+
+      // Create a container for the widget content
+      const container = document.createElement("div");
+      shadow.appendChild(container);
+
+      // Optionally, load your stylesheet into the Shadow DOM
+      const styleLink = document.createElement("link");
+      styleLink.rel = "stylesheet";
+      styleLink.href = "https://store-widget.vercel.app/react-widget-uv.css";
+      shadow.appendChild(styleLink);
+
+      // Render widget content into the shadow container
+      // (React rendering into Shadow DOM requires a library like `react-shadow-dom`)
+      // Alternatively, move all styles to inline or a separate CSS file loaded here
+    }
+  }, []);
+  // Function to check if buttons exist and create them if they don't
+  const checkAndCreateButtons = async (product_url: string) => {
+    try {
+      // GET request to check if buttons exist
+      const getResponse = await axios.get(
+        `${baseurl}/api/shopify/product-page-button/`,
+        {
+          params: {
+            schema_name: schema,
+            product_url: product_url,
+          },
+        }
+      );
+
+      const buttonsExist = getResponse.data.buttons_exist; 
+
+      if (!buttonsExist) {
+        // POST request to create buttons
+        await axios.post(
+          `${baseurl}/api/shopify/product-page-button/`,
+          {
+            schema_name: schema,
+            product_url: product_url,
+            product_page_button_id_text: "ProductSubmitButton-template--24466834784574__main",
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Cookie: "csrftoken=xjHalmQklLKzhpPd4nXCHyRofqj8RUFC",
+            },
+          }
+        );
+        console.log("Buttons created successfully for product:", product_url);
+      } else {
+        console.log("Buttons already exist for product:", product_url);
+      }
+    } catch (error) {
+      console.error("Error in checkAndCreateButtons:", error);
+    }
+  };
 
   useEffect(() => {
     if (widgetTheme?.bot_show_form) {
@@ -597,10 +657,12 @@ const CustomWidget = () => {
       const prodcut_response = `Product Name: ${product_title}, Description: ${product_description}, Price: Rs${product.price}, URL: ${product_url}`;
       setProductUrls((prev) => [...prev, product_url]);
       setExpanded(true);
+      // Check and create buttons for the retrieved product URL
+      await checkAndCreateButtons(product_url);
       console.log("prodcut_response", prodcut_response);
       return prodcut_response;
     } catch (error) {
-      console.error("Error in seeProduct:", error);
+      console.error("Error in showProduct:", error);
       return "Error occurred while retrieving the product.";
     }
   };
@@ -633,8 +695,8 @@ const CustomWidget = () => {
       console.log("collection_response", collection_response);
       return collection_response;
     } catch (error) {
-      console.error("Error in seeProduct:", error);
-      return "Error occurred while retrieving the product.";
+      console.error("Error in showCollection:", error);
+      return "Error occurred while retrieving the collection.";
     }
   };
 
@@ -695,11 +757,13 @@ const CustomWidget = () => {
     return "Scrolled down";
   };
 
-  const buyNow = (): string => {
+  const buyNow = async (): Promise<string> => {
+    // Use the latest product URL from productUrls or fall back to current page
+    const product_url = productUrls[productUrls.length - 1] || window.location.href;
+    await checkAndCreateButtons(product_url);
     const button = document.querySelector(
       ".shopify-payment-button__button--unbranded"
     );
-    const product_url = window.location.href;
     axios
       .post(`${baseurl}/api/shopify/mark-product-converted/`, {
         product_url: product_url,
@@ -720,8 +784,10 @@ const CustomWidget = () => {
     }
   };
 
-  const addToCart = (): string => {
-    const product_url = window.location.href;
+  const addToCart = async (): Promise<string> => {
+    // Use the latest product URL from productUrls or fall back to current page
+    const product_url = productUrls[productUrls.length - 1] || window.location.href;
+    await checkAndCreateButtons(product_url);
     const button = document.getElementById(
       "ProductSubmitButton-template--24466834784574__main"
     );
@@ -794,7 +860,7 @@ const CustomWidget = () => {
   };
 
   return (
-    <div style={getWidgetStyles()} className="flex flex-col items-end">
+    <div ref={widgetRef} style={getWidgetStyles()} className="flex flex-col items-end">
       {expanded ? (
         <div
           className="bg-white rounded-3xl shadow-2xl overflow-hidden"
@@ -976,7 +1042,7 @@ const CustomWidget = () => {
             ) : (
               <>
                 {/* Microphone Section */}
-                 <div className="flex flex-col items-center justify-center py-6">
+                <div className="flex flex-col items-center justify-center py-6">
                   {productUrls.length > 0 ? (
                     <div className="w-full max-h-64 overflow-y-auto px-6 space-y-4">
                       {productUrls.map((url, index) => (
@@ -1058,7 +1124,7 @@ const CustomWidget = () => {
                     </div>
                   </div>
                 )}
-               
+
                 {/* Input Area */}
                 {widgetTheme?.bot_show_chat && (
                   <div className="p-6 pt-0">
